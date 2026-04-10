@@ -1,0 +1,57 @@
+shop: ТехноСклад
+categories:
+  - id: 101
+    name: Смартфоны
+  - id: 102
+    name: Ноутбуки
+  - id: 103
+    name: Наушники
+
+goods:
+  - id: 5001
+    category: 101
+    model: xiaomi/redmi-note-13
+    name: Смартфон Xiaomi Redmi Note 13 8/256
+    price: 22990
+    price_rrc: 25990
+    quantity: 12
+    parameters:
+      Цвет: черный
+      Память: 256 ГБ
+      Диагональ: 6.67
+
+  - id: 5002
+    category: 101
+    model: samsung/galaxy-a55
+    name: Смартфон Samsung Galaxy A55 8/128
+    price: 34990
+    price_rrc: 37990
+    quantity: 8
+    parameters:
+      Цвет: синий
+      Память: 128 ГБ
+      NFC: true
+
+  - id: 6001
+    category: 102
+    model: lenovo/ideapad-3
+    name: Ноутбук Lenovo IdeaPad 3 15ITL6
+    price: 52990
+    price_rrc: 57990
+    quantity: 4
+    parameters:
+      Процессор: Intel Core i5
+      ОЗУ: 16 ГБ
+      SSD: 512 ГБ
+
+  - id: 7001
+    category: 103
+    model: sony/wh-ch520
+    name: Наушники Sony WH-CH520
+    price: 4990
+    price_rrc: 5990
+    quantity: 15
+    parameters:
+      Тип: накладные
+      Bluetooth: true
+      Время работы: 40 часов
