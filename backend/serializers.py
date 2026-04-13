@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
-from backend.models import ProductInfo, ProductParameter, User
+from backend.models import OrderItem, Product, ProductInfo, ProductParameter, User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -81,3 +81,35 @@ class ProductListSerializer(serializers.ModelSerializer):
             'price_rrc',
             'parameters',
         )
+
+
+class ProductOfferSerializer(serializers.ModelSerializer):
+    shop = serializers.CharField(source='shop.name')
+    parameters = ProductParameterSerializer(source='params', many=True)
+
+    class Meta:
+        model = ProductInfo
+        fields = ('id', 'name', 'shop', 'quantity', 'price', 'price_rrc', 'parameters')
+
+
+class ProductDetailSerializer(serializers.ModelSerializer):
+    category = serializers.CharField(source='category.name')
+    offers = ProductOfferSerializer(many=True)
+
+    class Meta:
+        model = Product
+        fields = ('id', 'name', 'category', 'offers')
+
+
+class BasketAddSerializer(serializers.Serializer):
+    product_info = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1, default=1)
+
+
+class BasketItemSerializer(serializers.ModelSerializer):
+    product = serializers.CharField(source='product.name')
+    shop = serializers.CharField(source='shop.name')
+
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'product', 'shop', 'quantity')
