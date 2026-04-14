@@ -7,10 +7,12 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from backend.models import Order, OrderItem, Product, ProductInfo
+from backend.models import Contact, Order, OrderItem, Product, ProductInfo
 from backend.serializers import (
     BasketAddSerializer,
     BasketItemSerializer,
+    ContactAddSerializer,
+    ContactSerializer,
     LoginSerializer,
     ProductDetailSerializer,
     ProductListSerializer,
@@ -127,3 +129,40 @@ class BasketAPIView(APIView):
             )
 
         return Response({'status': 'ok', 'deleted': item_id})
+
+
+class ContactAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        contacts = Contact.objects.filter(user=request.user).order_by('id')
+        serializer = ContactSerializer(contacts, many=True)
+        return Response({'status': 'ok', 'items': serializer.data})
+
+    def post(self, request):
+        serializer = ContactAddSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        contact = Contact.objects.create(
+            user=request.user,
+            type=serializer.validated_data['type'],
+            value=serializer.validated_data['value'],
+        )
+        return Response({'status': 'ok', 'contact_id': contact.id})
+
+    def delete(self, request):
+        contact_id = request.data.get('contact_id')
+        if not contact_id:
+            return Response(
+                {'status': 'error', 'error': 'Передайте contact_id'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        deleted, _ = Contact.objects.filter(user=request.user, id=contact_id).delete()
+        if not deleted:
+            return Response(
+                {'status': 'error', 'error': 'Адрес не найден'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response({'status': 'ok', 'deleted': contact_id})

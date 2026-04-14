@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
-from backend.models import OrderItem, Product, ProductInfo, ProductParameter, User
+from backend.models import Contact, OrderItem, Product, ProductInfo, ProductParameter, User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -113,3 +113,14 @@ class BasketItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ('id', 'product', 'shop', 'quantity')
+
+
+class ContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Contact
+        fields = ('id', 'type', 'value')
+
+
+class ContactAddSerializer(serializers.Serializer):
+    value = serializers.CharField()
+    type = serializers.CharField(required=False, default='address')
