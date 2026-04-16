@@ -124,3 +124,7 @@ class ContactSerializer(serializers.ModelSerializer):
 class ContactAddSerializer(serializers.Serializer):
     value = serializers.CharField()
     type = serializers.CharField(required=False, default='address')
+
+
+class OrderConfirmSerializer(serializers.Serializer):
+    contact_id = serializers.IntegerField()

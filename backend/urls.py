@@ -1,6 +1,15 @@
 from django.urls import path
 
-from backend.views import BasketAPIView, ContactAPIView, LoginAPIView, ProductDetailAPIView, ProductListAPIView, RegisterAPIView, api_status
+from backend.views import (
+    BasketAPIView,
+    ContactAPIView,
+    LoginAPIView,
+    OrderConfirmAPIView,
+    ProductDetailAPIView,
+    ProductListAPIView,
+    RegisterAPIView,
+    api_status,
+)
 
 urlpatterns = [
     path('status/', api_status, name='api-status'),
@@ -10,4 +19,5 @@ urlpatterns = [
     path('products/<int:pk>/', ProductDetailAPIView.as_view(), name='api-product-detail'),
     path('basket/', BasketAPIView.as_view(), name='api-basket'),
     path('contacts/', ContactAPIView.as_view(), name='api-contacts'),
+    path('order/confirm/', OrderConfirmAPIView.as_view(), name='api-order-confirm'),
 ]

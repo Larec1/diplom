@@ -14,6 +14,7 @@ from backend.serializers import (
     ContactAddSerializer,
     ContactSerializer,
     LoginSerializer,
+    OrderConfirmSerializer,
     ProductDetailSerializer,
     ProductListSerializer,
     RegisterSerializer,
@@ -166,3 +167,40 @@ class ContactAPIView(APIView):
             )
 
         return Response({'status': 'ok', 'deleted': contact_id})
+
+
+class OrderConfirmAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = OrderConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        basket = Order.objects.filter(user=request.user, status='basket').first()
+        if not basket:
+            return Response(
+                {'status': 'error', 'error': 'Корзина не найдена'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not OrderItem.objects.filter(order=basket).exists():
+            return Response(
+                {'status': 'error', 'error': 'Корзина пустая'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        contact = Contact.objects.filter(
+            user=request.user,
+            id=serializer.validated_data['contact_id'],
+        ).first()
+        if not contact:
+            return Response(
+                {'status': 'error', 'error': 'Адрес доставки не найден'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        basket.contact = contact
+        basket.status = 'new'
+        basket.save()
+
+        return Response({'status': 'ok', 'order_id': basket.id})
