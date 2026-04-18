@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -15,6 +17,9 @@ from backend.serializers import (
     ContactSerializer,
     LoginSerializer,
     OrderConfirmSerializer,
+    OrderDetailSerializer,
+    OrderListSerializer,
+    order_total_price,
     ProductDetailSerializer,
     ProductListSerializer,
     RegisterSerializer,
@@ -176,10 +181,17 @@ class OrderConfirmAPIView(APIView):
         serializer = OrderConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        basket = Order.objects.filter(user=request.user, status='basket').first()
+        basket_id = serializer.validated_data['basket_id']
+        contact_id = serializer.validated_data['contact_id']
+
+        basket = Order.objects.filter(
+            id=basket_id,
+            user=request.user,
+            status='basket',
+        ).first()
         if not basket:
             return Response(
-                {'status': 'error', 'error': 'Корзина не найдена'},
+                {'status': 'error', 'error': 'Корзина не найдена или уже оформлена'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -189,10 +201,7 @@ class OrderConfirmAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        contact = Contact.objects.filter(
-            user=request.user,
-            id=serializer.validated_data['contact_id'],
-        ).first()
+        contact = Contact.objects.filter(user=request.user, id=contact_id).first()
         if not contact:
             return Response(
                 {'status': 'error', 'error': 'Адрес доставки не найден'},
@@ -203,4 +212,66 @@ class OrderConfirmAPIView(APIView):
         basket.status = 'new'
         basket.save()
 
+        total = order_total_price(basket)
+
+        # Письмо клиенту: подтверждение заказа (в разработке уходит в консоль).
+        send_mail(
+            subject=f'Заказ №{basket.id} принят',
+            message=(
+                f'Здравствуйте!\n\n'
+                f'Ваш заказ №{basket.id} подтверждён.\n'
+                f'Адрес доставки: {contact.value}\n'
+                f'Сумма заказа: {total} руб.\n\n'
+                f'Спасибо за покупку!'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[request.user.email],
+            fail_silently=False,
+        )
+
+        # Копия администратору (накладная / уведомление).
+        admin_email = getattr(settings, 'ORDER_NOTIFY_EMAIL', settings.DEFAULT_FROM_EMAIL)
+        send_mail(
+            subject=f'Новый заказ №{basket.id}',
+            message=(
+                f'Заказ от {request.user.email}\n'
+                f'Контакт доставки: {contact.value}\n'
+                f'Сумма: {total} руб.'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[admin_email],
+            fail_silently=False,
+        )
+
         return Response({'status': 'ok', 'order_id': basket.id})
+
+
+class OrderListAPIView(APIView):
+    """Список заказов пользователя (без текущей корзины)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        orders = (
+            Order.objects.filter(user=request.user)
+            .exclude(status='basket')
+            .order_by('-dt')
+        )
+        serializer = OrderListSerializer(orders, many=True)
+        return Response({'status': 'ok', 'items': serializer.data})
+
+
+class OrderDetailAPIView(APIView):
+    """Детали одного заказа."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, user=request.user)
+        if order.status == 'basket':
+            return Response(
+                {'status': 'error', 'error': 'Это корзина, не заказ'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = OrderDetailSerializer(order)
+        return Response({'status': 'ok', 'item': serializer.data})

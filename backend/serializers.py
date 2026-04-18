@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
-from backend.models import Contact, OrderItem, Product, ProductInfo, ProductParameter, User
+from backend.models import Contact, Order, OrderItem, Product, ProductInfo, ProductParameter, User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -127,4 +127,62 @@ class ContactAddSerializer(serializers.Serializer):
 
 
 class OrderConfirmSerializer(serializers.Serializer):
+    basket_id = serializers.IntegerField()
     contact_id = serializers.IntegerField()
+
+
+def order_total_price(order):
+    """Считаем сумму заказа: цена из прайса * количество по каждой позиции."""
+    total = 0
+    for position in order.positions.all():
+        info = ProductInfo.objects.filter(product=position.product, shop=position.shop).first()
+        if info:
+            total += info.price * position.quantity
+    return total
+
+
+class OrderListSerializer(serializers.ModelSerializer):
+    """Список заказов: номер, дата, сумма, статус (как в screens.md)."""
+
+    total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ('id', 'dt', 'status', 'total')
+
+    def get_total(self, obj):
+        return order_total_price(obj)
+
+
+class OrderPositionSerializer(serializers.ModelSerializer):
+    product = serializers.CharField(source='product.name')
+    shop = serializers.CharField(source='shop.name')
+    price = serializers.SerializerMethodField()
+    line_total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'product', 'shop', 'quantity', 'price', 'line_total')
+
+    def get_price(self, obj):
+        info = ProductInfo.objects.filter(product=obj.product, shop=obj.shop).first()
+        return info.price if info else 0
+
+    def get_line_total(self, obj):
+        info = ProductInfo.objects.filter(product=obj.product, shop=obj.shop).first()
+        if info:
+            return info.price * obj.quantity
+        return 0
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    total = serializers.SerializerMethodField()
+    contact = ContactSerializer(read_only=True)
+    items = OrderPositionSerializer(source='positions', many=True)
+
+    class Meta:
+        model = Order
+        fields = ('id', 'dt', 'status', 'contact', 'total', 'items')
+
+    def get_total(self, obj):
+        return order_total_price(obj)

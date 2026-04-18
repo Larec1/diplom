@@ -5,6 +5,8 @@ from backend.views import (
     ContactAPIView,
     LoginAPIView,
     OrderConfirmAPIView,
+    OrderDetailAPIView,
+    OrderListAPIView,
     ProductDetailAPIView,
     ProductListAPIView,
     RegisterAPIView,
@@ -20,4 +22,6 @@ urlpatterns = [
     path('basket/', BasketAPIView.as_view(), name='api-basket'),
     path('contacts/', ContactAPIView.as_view(), name='api-contacts'),
     path('order/confirm/', OrderConfirmAPIView.as_view(), name='api-order-confirm'),
+    path('orders/', OrderListAPIView.as_view(), name='api-orders'),
+    path('orders/<int:pk>/', OrderDetailAPIView.as_view(), name='api-order-detail'),
 ]
