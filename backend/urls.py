@@ -7,6 +7,7 @@ from backend.views import (
     OrderConfirmAPIView,
     OrderDetailAPIView,
     OrderListAPIView,
+    OrderStatusUpdateAPIView,
     ProductDetailAPIView,
     ProductListAPIView,
     RegisterAPIView,
@@ -23,5 +24,6 @@ urlpatterns = [
     path('contacts/', ContactAPIView.as_view(), name='api-contacts'),
     path('order/confirm/', OrderConfirmAPIView.as_view(), name='api-order-confirm'),
     path('orders/', OrderListAPIView.as_view(), name='api-orders'),
+    path('orders/<int:pk>/status/', OrderStatusUpdateAPIView.as_view(), name='api-order-status'),
     path('orders/<int:pk>/', OrderDetailAPIView.as_view(), name='api-order-detail'),
 ]

@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
-from backend.models import Contact, Order, OrderItem, Product, ProductInfo, ProductParameter, User
+from backend.models import Contact, Order, OrderItem, ORDER_STATES, Product, ProductInfo, ProductParameter, User
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -129,6 +129,10 @@ class ContactAddSerializer(serializers.Serializer):
 class OrderConfirmSerializer(serializers.Serializer):
     basket_id = serializers.IntegerField()
     contact_id = serializers.IntegerField()
+
+
+class OrderStatusSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=[c for c in ORDER_STATES if c[0] != 'basket'])
 
 
 def order_total_price(order):

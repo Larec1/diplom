@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from backend.models import Contact, Order, OrderItem, Product, ProductInfo
+from backend.models import Contact, Order, OrderItem, Product, ProductInfo, Shop
 from backend.serializers import (
     BasketAddSerializer,
     BasketItemSerializer,
@@ -19,6 +19,7 @@ from backend.serializers import (
     OrderConfirmSerializer,
     OrderDetailSerializer,
     OrderListSerializer,
+    OrderStatusSerializer,
     order_total_price,
     ProductDetailSerializer,
     ProductListSerializer,
@@ -275,3 +276,41 @@ class OrderDetailAPIView(APIView):
             )
         serializer = OrderDetailSerializer(order)
         return Response({'status': 'ok', 'item': serializer.data})
+
+
+class OrderStatusUpdateAPIView(APIView):
+    """Магазин меняет статус заказа, если в заказе есть его товары."""
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        if request.user.user_type != 'shop':
+            return Response(
+                {'status': 'error', 'error': 'Доступно только магазину'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        try:
+            shop = request.user.shop_profile
+        except Shop.DoesNotExist:
+            return Response(
+                {'status': 'error', 'error': 'У аккаунта нет магазина'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        order = get_object_or_404(Order, pk=pk)
+        if order.status == 'basket':
+            return Response(
+                {'status': 'error', 'error': 'Это корзина, не заказ'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not order.positions.filter(shop=shop).exists():
+            return Response(
+                {'status': 'error', 'error': 'В заказе нет товаров вашего магазина'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = OrderStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order.status = serializer.validated_data['status']
+        order.save()
+        return Response({'status': 'ok', 'order_id': order.id, 'new_status': order.status})
