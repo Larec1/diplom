@@ -42,6 +42,17 @@ class RegisterAPIView(APIView):
         user = serializer.save()
         token, _ = Token.objects.get_or_create(user=user)
 
+        send_mail(
+            subject=f'Password Reset Token for {user.email}',
+            message=(
+                f'Подтверждение регистрации для {user.email}.\n'
+                f'Регистрация прошла успешно, можно входить через API.'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+
         return Response(
             {
                 'status': 'ok',
