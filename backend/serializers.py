@@ -107,8 +107,8 @@ class BasketAddSerializer(serializers.Serializer):
 
 
 class BasketItemSerializer(serializers.ModelSerializer):
-    product = serializers.CharField(source='product.name')
-    shop = serializers.CharField(source='shop.name')
+    product = serializers.CharField(source='product_info.product.name')
+    shop = serializers.CharField(source='product_info.shop.name')
 
     class Meta:
         model = OrderItem
@@ -138,10 +138,8 @@ class OrderStatusSerializer(serializers.Serializer):
 def order_total_price(order):
     """Считаем сумму заказа: цена из прайса * количество по каждой позиции."""
     total = 0
-    for position in order.positions.all():
-        info = ProductInfo.objects.filter(product=position.product, shop=position.shop).first()
-        if info:
-            total += info.price * position.quantity
+    for position in order.positions.select_related('product_info').all():
+        total += position.product_info.price * position.quantity
     return total
 
 
@@ -159,8 +157,8 @@ class OrderListSerializer(serializers.ModelSerializer):
 
 
 class OrderPositionSerializer(serializers.ModelSerializer):
-    product = serializers.CharField(source='product.name')
-    shop = serializers.CharField(source='shop.name')
+    product = serializers.CharField(source='product_info.product.name')
+    shop = serializers.CharField(source='product_info.shop.name')
     price = serializers.SerializerMethodField()
     line_total = serializers.SerializerMethodField()
 
@@ -169,14 +167,10 @@ class OrderPositionSerializer(serializers.ModelSerializer):
         fields = ('id', 'product', 'shop', 'quantity', 'price', 'line_total')
 
     def get_price(self, obj):
-        info = ProductInfo.objects.filter(product=obj.product, shop=obj.shop).first()
-        return info.price if info else 0
+        return obj.product_info.price
 
     def get_line_total(self, obj):
-        info = ProductInfo.objects.filter(product=obj.product, shop=obj.shop).first()
-        if info:
-            return info.price * obj.quantity
-        return 0
+        return obj.product_info.price * obj.quantity
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
