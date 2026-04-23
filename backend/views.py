@@ -1,9 +1,10 @@
 from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -28,6 +29,7 @@ from backend.serializers import (
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def api_status(request):
     # Проверка, что API подключен.
     return Response({'status': 'ok', 'message': 'API backend работает'})
@@ -103,7 +105,11 @@ class BasketAPIView(APIView):
 
     def get(self, request):
         basket = self.get_basket(request.user)
-        items = OrderItem.objects.filter(order=basket).order_by('id')
+        items = (
+            OrderItem.objects.filter(order=basket)
+            .select_related('product_info__product', 'product_info__shop')
+            .order_by('id')
+        )
         serializer = BasketItemSerializer(items, many=True)
         return Response({'status': 'ok', 'items': serializer.data})
 
@@ -118,8 +124,7 @@ class BasketAPIView(APIView):
         basket = self.get_basket(request.user)
         item, created = OrderItem.objects.get_or_create(
             order=basket,
-            product=product_info.product,
-            shop=product_info.shop,
+            product_info=product_info,
             defaults={'quantity': quantity},
         )
 
@@ -267,6 +272,12 @@ class OrderListAPIView(APIView):
         orders = (
             Order.objects.filter(user=request.user)
             .exclude(status='basket')
+            .prefetch_related(
+                Prefetch(
+                    'positions',
+                    queryset=OrderItem.objects.select_related('product_info'),
+                ),
+            )
             .order_by('-dt')
         )
         serializer = OrderListSerializer(orders, many=True)
@@ -279,7 +290,19 @@ class OrderDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
-        order = get_object_or_404(Order, pk=pk, user=request.user)
+        order = get_object_or_404(
+            Order.objects.prefetch_related(
+                Prefetch(
+                    'positions',
+                    queryset=OrderItem.objects.select_related(
+                        'product_info__product',
+                        'product_info__shop',
+                    ),
+                ),
+            ),
+            pk=pk,
+            user=request.user,
+        )
         if order.status == 'basket':
             return Response(
                 {'status': 'error', 'error': 'Это корзина, не заказ'},
@@ -314,7 +337,7 @@ class OrderStatusUpdateAPIView(APIView):
                 {'status': 'error', 'error': 'Это корзина, не заказ'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not order.positions.filter(shop=shop).exists():
+        if not order.positions.filter(product_info__shop=shop).exists():
             return Response(
                 {'status': 'error', 'error': 'В заказе нет товаров вашего магазина'},
                 status=status.HTTP_403_FORBIDDEN,

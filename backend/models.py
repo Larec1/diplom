@@ -177,16 +177,20 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='positions')
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='order_items', null=True, blank=True)
-    shop = models.ForeignKey(Shop, on_delete=models.CASCADE, related_name='order_items', null=True, blank=True)
+    product_info = models.ForeignKey(
+        ProductInfo,
+        on_delete=models.CASCADE,
+        related_name='order_items',
+        verbose_name='Предложение',
+    )
     quantity = models.PositiveIntegerField('Количество', default=1)
 
     def __str__(self):
-        return f'{self.product} x {self.quantity}'
+        return f'{self.product_info.product} x {self.quantity}'
 
     class Meta:
         verbose_name = 'Позиция заказа'
         verbose_name_plural = 'Позиции заказа'
         constraints = [
-            models.UniqueConstraint(fields=['order', 'product', 'shop'], name='unique_order_product_shop'),
+            models.UniqueConstraint(fields=['order', 'product_info'], name='unique_order_product_info'),
         ]
