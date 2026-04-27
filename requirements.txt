@@ -1,5 +1,6 @@
 django~=5.0
 djangorestframework~=3.14.0
+drf-spectacular~=0.28.0
 requests~=2.31.0
 pyyaml~=6.0.0
 celery[redis]~=5.4.0

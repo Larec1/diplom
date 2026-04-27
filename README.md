@@ -53,6 +53,14 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+Документация API (OpenAPI 3, [drf-spectacular](https://drf-spectacular.readthedocs.io/en/latest/readme.html)):
+
+- JSON-схема: http://127.0.0.1:8000/api/schema/
+- **Swagger UI** (удобно смотреть поля и пробовать запросы): http://127.0.0.1:8000/api/schema/swagger-ui/
+- ReDoc: http://127.0.0.1:8000/api/schema/redoc/
+
+В Swagger для методов с токеном нажми **Authorize** и введи: `Token <твой_ключ>`.
+
 7. Фоновые задачи (Celery): письма при регистрации и подтверждении заказа уходят в очередь. Нужны **Redis** и воркер:
 
 ```bash
