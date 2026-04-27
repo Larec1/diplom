@@ -53,6 +53,18 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+7. Фоновые задачи (Celery): письма при регистрации и подтверждении заказа уходят в очередь. Нужны **Redis** и воркер:
+
+```bash
+# Терминал 1 — брокер (macOS: brew install redis && redis-server)
+redis-server
+
+# Терминал 2 — воркер
+celery -A orders worker -l info
+```
+
+Переменные окружения (по желанию): `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` (по умолчанию `redis://127.0.0.1:6379/0`).
+
 ## Что сделано по моделям (этап 2)
 
 Добавлены модели:

@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -11,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from backend.models import Contact, Order, OrderItem, Product, ProductInfo, Shop
+from backend.tasks import send_order_confirmation_emails, send_registration_welcome_email
 from backend.serializers import (
     BasketAddSerializer,
     BasketItemSerializer,
@@ -44,16 +44,7 @@ class RegisterAPIView(APIView):
         user = serializer.save()
         token, _ = Token.objects.get_or_create(user=user)
 
-        send_mail(
-            subject=f'Password Reset Token for {user.email}',
-            message=(
-                f'Подтверждение регистрации для {user.email}.\n'
-                f'Регистрация прошла успешно, можно входить через API.'
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
+        send_registration_welcome_email.delay(user.email)
 
         return Response(
             {
@@ -230,34 +221,13 @@ class OrderConfirmAPIView(APIView):
         basket.save()
 
         total = order_total_price(basket)
-
-        # Письмо клиенту: подтверждение заказа (в разработке уходит в консоль).
-        send_mail(
-            subject=f'Заказ №{basket.id} принят',
-            message=(
-                f'Здравствуйте!\n\n'
-                f'Ваш заказ №{basket.id} подтверждён.\n'
-                f'Адрес доставки: {contact.value}\n'
-                f'Сумма заказа: {total} руб.\n\n'
-                f'Спасибо за покупку!'
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[request.user.email],
-            fail_silently=False,
-        )
-
-        # Копия администратору (накладная / уведомление).
         admin_email = getattr(settings, 'ORDER_NOTIFY_EMAIL', settings.DEFAULT_FROM_EMAIL)
-        send_mail(
-            subject=f'Новый заказ №{basket.id}',
-            message=(
-                f'Заказ от {request.user.email}\n'
-                f'Контакт доставки: {contact.value}\n'
-                f'Сумма: {total} руб.'
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[admin_email],
-            fail_silently=False,
+        send_order_confirmation_emails.delay(
+            basket.id,
+            request.user.email,
+            contact.value,
+            total,
+            admin_email,
         )
 
         return Response({'status': 'ok', 'order_id': basket.id})
