@@ -10,6 +10,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from backend.throttles import SettingsScopedThrottle
+
 from backend.models import Contact, Order, OrderItem, Product, ProductInfo, Shop
 from backend.tasks import send_order_confirmation_emails, send_registration_welcome_email
 from backend.serializers import (
@@ -38,6 +40,7 @@ from backend.serializers import (
     ProductListWrapSerializer,
     RegisterOkSerializer,
     RegisterSerializer,
+    SocialTokenOutSerializer,
     StatusOkMessageSerializer,
     order_total_price,
 )
@@ -61,6 +64,8 @@ class RegisterAPIView(APIView):
     """Новый пользователь. В ответе токен для заголовка Authorization."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [SettingsScopedThrottle]
+    throttle_scope = 'register'
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -91,6 +96,8 @@ class LoginAPIView(APIView):
     """Логин по email и паролю, отдаём токен."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [SettingsScopedThrottle]
+    throttle_scope = 'login'
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data, context={'request': request})
@@ -284,6 +291,8 @@ class OrderConfirmAPIView(APIView):
     """Оформить корзину в заказ. Письма уходят в фоне (celery)."""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [SettingsScopedThrottle]
+    throttle_scope = 'order_confirm'
 
     def post(self, request):
         serializer = OrderConfirmSerializer(data=request.data)
@@ -436,3 +445,20 @@ class OrderStatusUpdateAPIView(APIView):
         order.status = serializer.validated_data['status']
         order.save()
         return Response({'status': 'ok', 'order_id': order.id, 'new_status': order.status})
+
+
+@extend_schema_view(
+    get=extend_schema(responses={200: SocialTokenOutSerializer}),
+)
+class SocialSessionTokenAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        token, _ = Token.objects.get_or_create(user=request.user)
+        return Response(
+            {
+                'status': 'ok',
+                'token': token.key,
+                'email': request.user.email,
+            }
+        )

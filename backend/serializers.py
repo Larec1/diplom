@@ -293,3 +293,9 @@ class OrderStatusPatchOkSerializer(serializers.Serializer):
     status = serializers.CharField()
     order_id = serializers.IntegerField()
     new_status = serializers.CharField()
+
+
+class SocialTokenOutSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    token = serializers.CharField()
+    email = serializers.EmailField()
