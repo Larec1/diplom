@@ -448,14 +448,9 @@ class OrderStatusUpdateAPIView(APIView):
 
 
 @extend_schema_view(
-    get=extend_schema(
-        summary='После oauth в браузере — забрать api-токен',
-        responses={200: SocialTokenOutSerializer},
-    ),
+    get=extend_schema(responses={200: SocialTokenOutSerializer}),
 )
 class SocialSessionTokenAPIView(APIView):
-    """Когда зашли через google/github, django держит сессию — тут отдаю токен как у обычного логина."""
-
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
