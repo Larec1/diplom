@@ -11,6 +11,7 @@ from backend.views import (
     ProductDetailAPIView,
     ProductListAPIView,
     RegisterAPIView,
+    SocialSessionTokenAPIView,
     api_status,
 )
 
@@ -18,6 +19,7 @@ urlpatterns = [
     path('status/', api_status, name='api-status'),
     path('auth/register/', RegisterAPIView.as_view(), name='api-register'),
     path('auth/login/', LoginAPIView.as_view(), name='api-login'),
+    path('auth/social/token/', SocialSessionTokenAPIView.as_view(), name='api-social-token'),
     path('products/', ProductListAPIView.as_view(), name='api-products'),
     path('products/<int:pk>/', ProductDetailAPIView.as_view(), name='api-product-detail'),
     path('basket/', BasketAPIView.as_view(), name='api-basket'),

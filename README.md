@@ -73,6 +73,18 @@ celery -A orders worker -l info
 
 Переменные окружения (по желанию): `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND` (по умолчанию `redis://127.0.0.1:6379/0`).
 
+## Throttling
+
+Чтобы не долбили регистрацию/логин/оформление заказа тысячу раз в секунду, на этих ручках висят лимиты (`SettingsScopedThrottle` + `DEFAULT_THROTTLE_RATES` в `orders/settings.py`). Проверка: `python manage.py test backend.tests`.
+
+## OAuth (Google и GitHub)
+
+Ставим ключи в переменные окружения: `SOCIAL_AUTH_GOOGLE_OAUTH2_KEY`, `SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET`, при желании `SOCIAL_AUTH_GITHUB_KEY`, `SOCIAL_AUTH_GITHUB_SECRET`. В консоли разработчика в redirect URI указать что-то вроде `http://127.0.0.1:8000/oauth/complete/google-oauth2/` (для github — тот же хост, путь `/oauth/complete/github/`).
+
+В браузере: `http://127.0.0.1:8000/oauth/login/google-oauth2/` — после удачного входа кинет на `http://127.0.0.1:8000/api/v1/auth/social/token/`, там JSON с `token` как после обычного логина.
+
+Если глючит редирект: в админке **Sites** поменять домен с `example.com` на `127.0.0.1:8000`.
+
 ## Что сделано по моделям (этап 2)
 
 Добавлены модели:
